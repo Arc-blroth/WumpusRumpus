@@ -16,10 +16,19 @@ repositories {
 }
 
 dependencies {
-   
    implementation 'com.google.code.gson:gson:2.8.5'
    implementation 'org.java-websocket:Java-WebSocket:1.4.0'
    implementation 'com.konghq:unirest-java:2.3.08'
-   
+}
+
+sourceSets {
+	main {
+		java {
+			srcDirs= ["src/main/java"]
+		}
+		resources {
+			srcDirs= ["src/main/res"]
+		}
+	}
 }
 
