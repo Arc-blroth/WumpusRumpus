@@ -1,7 +1,7 @@
 {
 	"op": 2,
 	"d": {
-	  "token": "Haha you thought there would be a token here but no its me Dio",
+	  "token": "{token}",
 	  "properties": {
 		"$os": "windows",
 		"$browser": "wumpusrumpus-bot",

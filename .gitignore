@@ -1,1 +1,5 @@
-/.gradle/
+# Compiled class file
+*.class
+
+# The secret bot.config
+bot.config

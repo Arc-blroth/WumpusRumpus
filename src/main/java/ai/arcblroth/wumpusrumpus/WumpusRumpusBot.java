@@ -9,13 +9,15 @@ import java.util.logging.Logger;
 
 import com.google.gson.*;
 
+import ai.arcblroth.wumpusrumpus.util.InternetLoader;
+import ai.arcblroth.wumpusrumpus.util.ResourceLoader;
 import kong.unirest.Unirest;
 
 public class WumpusRumpusBot {
 
 	private static Logger mainLogger = Logger.getLogger("main");
 	public static Properties bot_config = new Properties();
-	public static Properties settings_config = new Properties();
+	public static Properties strings_config = new Properties();
 	public static Gson gson = new Gson();
 
 	public static void main(String[] wumpusArgs) throws URISyntaxException {
@@ -26,7 +28,7 @@ public class WumpusRumpusBot {
 
 		try {
 			bot_config.load(ResourceLoader.getResource("config/bot.config"));
-			settings_config.load(ResourceLoader.getResource("config/settings.config"));
+			strings_config.load(ResourceLoader.getResource("config/strings.config"));
 		} catch (Exception e) {
 			mainLogger.log(Level.SEVERE, "", e);
 			mainLogger.log(Level.SEVERE, "Configs not found, exiting...");

@@ -1,4 +1,4 @@
-package ai.arcblroth.wumpusrumpus;
+package ai.arcblroth.wumpusrumpus.util;
 
 import java.io.*;
 import java.util.ArrayList;
