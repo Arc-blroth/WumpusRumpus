@@ -194,6 +194,16 @@ public class WumpusRumpusClient extends WebSocketClient {
 								break;
 							}
 
+							// Move/Skip
+							if (args.length == 3 && args[1].equals(strings_config.getProperty("command.move"))) {
+								g.turnMove(user_id, message_id, args[2]);
+								break;
+							}
+							if (args[1].equals(strings_config.getProperty("command.skip"))) {
+								g.turnSkip(user_id, message_id);
+								break;
+							}
+
 						} else {
 							continue;
 						}

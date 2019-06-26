@@ -30,6 +30,15 @@ public class Coordinate {
 		this.y = y;
 	}
 
+	public int getMapInt(int mapWidth) {
+		return x + y * mapWidth;
+	}
+
+	public void setMapInt(int mapInt, int mapWidth) {
+		x = mapInt % mapWidth;
+		y = mapInt / mapWidth;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
