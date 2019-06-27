@@ -17,8 +17,18 @@ public class RackTile extends GameTile {
 	}
 
 	@Override
-	public void onPlayerStep(WumpusRumpusClient wrc, String channel_id, WumpusPlayer wp, Map<Integer, GameTile> map) {
+	public int onPlayerStep(WumpusRumpusClient wrc, String channel_id, WumpusPlayer wp, Map<Integer, GameTile> map) {
+		if (!saved) {
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.rack"));
+			return 1;
+		} else {
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.savedrack"));
+			return 0;
+		}
+	}
 
+	public void saved() {
+		this.saved = true;
 	}
 
 	@Override

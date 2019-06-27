@@ -3,13 +3,18 @@ package ai.arcblroth.wumpusrumpus.game;
 import static ai.arcblroth.wumpusrumpus.WumpusRumpusBot.*;
 
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.gson.JsonObject;
 
 import ai.arcblroth.wumpusrumpus.WumpusRumpusClient;
+import ai.arcblroth.wumpusrumpus.game.tile.EmptyTile;
 import ai.arcblroth.wumpusrumpus.game.tile.GameTile;
+import ai.arcblroth.wumpusrumpus.game.tile.HamsterTile;
+import ai.arcblroth.wumpusrumpus.game.tile.RackTile;
+import ai.arcblroth.wumpusrumpus.game.tile.RouterTile;
 import ai.arcblroth.wumpusrumpus.util.CommandWrapper;
 import ai.arcblroth.wumpusrumpus.util.ResourceLoader;
 import kong.unirest.HttpResponse;
@@ -24,8 +29,11 @@ public class GameInstance {
 	private final ArrayList<String> player_ids = new ArrayList<String>(8);
 	private final ArrayList<WumpusPlayer> players = new ArrayList<WumpusPlayer>(8);
 	private boolean gameStarted = false;
-	private int currentPlayerTurn = 0;
+	private int turns = 0;
+	private int currentPlayer = 0;
 	private boolean currentPlayerHasExecutedMoveYet = false;
+	//0=not waiting, 1=rack, 2=router, 3=bug
+	private int waitingForPlayerResponse = 0;
 	private GameInitThread gt;
 	private GameMap gm;
 
@@ -132,25 +140,38 @@ public class GameInstance {
 		wrc.postMessage(channel_id, 
 				CommandWrapper.wrapEmbedMessage(
 						strings_config.getProperty("command.map.title"),
-						"```" + gm.renderMapToAscii(players, currentPlayerTurn) + "```")
+						"```" + gm.renderMapToAscii(players, currentPlayer) + "```")
 				);
 	}
 
 	private void nextTurn() {
-		// Give player time to react
-		try {Thread.sleep(4000);} catch (InterruptedException e) {}
-		currentPlayerHasExecutedMoveYet = false;
-		currentPlayerTurn++;
-		if (currentPlayerTurn >= players.size()) {
-			currentPlayerTurn = 0;
-		}
-		playTurn();
+		new Thread(() -> {
+			// Give player time to react
+			try {Thread.sleep(4000);} catch (InterruptedException e) {}
+
+			int tileInt = players.get(currentPlayer).getCoordinate().getMapInt(gm.getWidth());
+			
+			if(gm.getMap().get(tileInt) instanceof HamsterTile) {
+				//remove hamster tile since player did not attack it
+				gm.getMap().remove(tileInt);
+				gm.getMap().put(tileInt, new EmptyTile(players.get(currentPlayer).getCoordinate()));
+			}
+			
+			currentPlayerHasExecutedMoveYet = false;
+			waitingForPlayerResponse = 0;
+			currentPlayer++;
+			if (currentPlayer >= players.size()) {
+				currentPlayer = 0;
+			}
+			playTurn();
+		}).start();
 	}
 
 	public void playTurn() {
 		
-		WumpusPlayer wp = players.get(currentPlayerTurn);
+		WumpusPlayer wp = players.get(currentPlayer);
 		
+		//Tell player what they can do.
 		boolean canMoveUp, canMoveDown, canMoveRight, canMoveLeft;
 		int playerMapInt = wp.getCoordinate().getMapInt(gm.getWidth());
 		canMoveUp = (playerMapInt - gm.getWidth()) >= 0;
@@ -171,15 +192,21 @@ public class GameInstance {
 		displayMap();
 	}
 
-	public void turnMove(String player_id, String message_id, String dir) {
-
-		WumpusPlayer wp = players.get(currentPlayerTurn);
+	private boolean checkIfIsPlayersTurn(String player_id, String message_id) {
 
 		// Only can be done if its is a persons' turn
-		if (!wp.getPlayer_id().equals(player_id)) {
+		if (!players.get(currentPlayer).getPlayer_id().equals(player_id)) {
 			wrc.deleteMessage(channel_id, message_id);
-			return;
-		}
+			return false;
+		} else
+			return true;
+	}
+
+	public void turnMove(String player_id, String message_id, String dir) {
+
+		WumpusPlayer wp = players.get(currentPlayer);
+
+		if(!checkIfIsPlayersTurn(player_id, message_id)) return;
 		
 		// Just stop breaking my christian minecraft server, please
 		if (currentPlayerHasExecutedMoveYet) {
@@ -191,6 +218,8 @@ public class GameInstance {
 		// otherwise AHHH
 		boolean canMoveUp, canMoveDown, canMoveRight, canMoveLeft;
 		int playerMapInt = wp.getCoordinate().getMapInt(gm.getWidth());
+		// when you're too lazy to actually implement a map so you
+		// just use modulo operations
 		canMoveUp = (playerMapInt - gm.getWidth()) >= 0;
 		canMoveDown = (playerMapInt + gm.getWidth()) < gm.getWidth() * gm.getHeight();
 		canMoveLeft = ((playerMapInt % gm.getWidth()) - 1) >= 0;
@@ -217,7 +246,7 @@ public class GameInstance {
 	}
 
 	private void turnCheckTile(String dir) {
-		WumpusPlayer wp = players.get(currentPlayerTurn);
+		WumpusPlayer wp = players.get(currentPlayer);
 
 		currentPlayerHasExecutedMoveYet = true;
 		displayMap();
@@ -228,15 +257,166 @@ public class GameInstance {
 
 		//what tile are we on?
 		GameTile gt = gm.getMap().get(wp.getCoordinate().getMapInt(gm.getWidth()));
-		gt.onPlayerStep(wrc, channel_id, wp, gm.getMap());
+		int autoAdvance = gt.onPlayerStep(wrc, channel_id, wp, gm.getMap());
 		
 		//advance turn
-		nextTurn();
+		if(autoAdvance == 0) nextTurn();
+		else waitingForPlayerResponse = autoAdvance;
 	}
 
 	public void turnSkip(String player_id, String message_id) {
-		//advance turn
-		nextTurn();
+		if(waitingForPlayerResponse == 0) {
+			//advance turn
+			nextTurn();
+		}
+	}
+
+	public void turnOpenInventory(String player_id, String message_id) {
+		WumpusPlayer wp = players.get(currentPlayer);
+
+		if(!checkIfIsPlayersTurn(player_id, message_id)) return;
+		
+		StringBuilder inventoryBuilder = new StringBuilder();
+		inventoryBuilder.append("```");
+		
+		ArrayList<Loot> playerLoot = wp.getPlayerLoot();
+		
+		if (playerLoot.size() == 0) {
+			inventoryBuilder.append(strings_config.getProperty("command.inventory.empty"));
+		} else {
+			for(Loot l : playerLoot) {
+				inventoryBuilder.append(
+						strings_config.getProperty("command.inventory.entry")
+						.replace("{loot_name}", l.getName())
+						.replace("{loot_flavor}", l.getFlavorText())
+						.replace("{loot_save_mod}", Double.toString(l.getSaveModifer()))
+						.replace("{loot_defeat_mod}", Double.toString(l.getDefeatModifer()))
+				);
+			}
+		}
+		inventoryBuilder.append("```");
+		
+		wrc.postMessage(channel_id, 
+				CommandWrapper.wrapEmbedMessage(
+						strings_config.getProperty("command.inventory.title")
+							.replace("{player}", wrc.getUsername(player_id)),
+						inventoryBuilder.toString()
+					)
+			);
+
+	}
+
+	public void turnYes(String player_id, String message_id) {
+		WumpusPlayer wp = players.get(currentPlayer);
+
+		if(!checkIfIsPlayersTurn(player_id, message_id)) return;
+		
+		/* Whether or not you succeed or not is determined before
+		 * the fixing wait period starts.
+		 * I feel like this is a metaphor for life.
+		 */
+		
+		if(waitingForPlayerResponse == 1) {
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.rack.yes"));
+			boolean isSuccessful = new Random().nextDouble() < wp.getServerSaveChance();
+			try {Thread.sleep(4500);} catch (InterruptedException e) {}
+			
+			if(isSuccessful) {
+				wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.rack.fix.success"));
+				GameTile gt = gm.getMap().get(wp.getCoordinate().getMapInt(gm.getWidth()));
+				if(gt instanceof RackTile) {
+					((RackTile) gt).saved();
+				}
+			} else {
+				// KABOOM
+				wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.rack.fix.fail"));
+				gm.getMap().remove(wp.getCoordinate().getMapInt(gm.getWidth()));
+				gm.getMap().put(wp.getCoordinate().getMapInt(gm.getWidth()), new EmptyTile(wp.getCoordinate()));
+			}
+			nextTurn();
+		} else if(waitingForPlayerResponse == 2) {
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.router.yes"));
+			boolean isSuccessful = new Random().nextDouble() < wp.getServerSaveChance();
+			try {Thread.sleep(6000);} catch (InterruptedException e) {}
+			
+			if(isSuccessful) {
+				wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.router.fix.success"));
+				GameTile gt = gm.getMap().get(wp.getCoordinate().getMapInt(gm.getWidth()));
+				if (gt instanceof RouterTile) {
+					((RouterTile) gt).saved();
+				}
+			} else {
+				// KABOOM 2
+				wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.router.fix.fail"));
+				gm.getMap().remove(wp.getCoordinate().getMapInt(gm.getWidth()));
+				gm.getMap().put(wp.getCoordinate().getMapInt(gm.getWidth()), new EmptyTile(wp.getCoordinate()));
+			}
+			nextTurn();
+			
+		}
+		
+	}
+
+	public void turnNo(String player_id, String message_id) {
+		WumpusPlayer wp = players.get(currentPlayer);
+
+		if(!checkIfIsPlayersTurn(player_id, message_id)) return;
+
+		if (waitingForPlayerResponse == 1) {
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.rack.no"));
+			nextTurn();
+		} else if (waitingForPlayerResponse == 2) {
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.router.no"));
+			nextTurn();
+		}
+	}
+
+	public void turnAttack(String player_id, String message_id) {
+
+		WumpusPlayer wp = players.get(currentPlayer);
+		int tileInt = wp.getCoordinate().getMapInt(gm.getWidth());
+
+		if(!checkIfIsPlayersTurn(player_id, message_id)) return;
+		
+		if (waitingForPlayerResponse == 3) {
+
+			// Actual Bug Battling
+			boolean isSuccessful = new Random().nextDouble() < wp.getBugDefeatChance();
+			try {Thread.sleep(2000);} catch (InterruptedException e) {}
+			
+			if(isSuccessful) {
+				wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.bug.success"));
+				gm.getMap().remove(tileInt);
+				gm.getMap().put(tileInt, new EmptyTile(wp.getCoordinate()));
+			} else {
+				// OW OW OWEE
+				wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.bug.fail"));
+			}
+			nextTurn();
+			
+		} else if (waitingForPlayerResponse == 1) { //The following are special events
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.rack"));
+			gm.getMap().remove(tileInt);
+			gm.getMap().put(tileInt, new EmptyTile(wp.getCoordinate()));
+			nextTurn();
+		} else if (waitingForPlayerResponse == 2) {
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.router"));
+			gm.getMap().remove(tileInt);
+			gm.getMap().put(tileInt, new EmptyTile(wp.getCoordinate()));
+			nextTurn();
+		} else if(gm.getMap().get(tileInt) instanceof HamsterTile) {
+			// Monster.
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.hamster"));
+			gm.getMap().remove(tileInt);
+			gm.getMap().put(tileInt, new EmptyTile(wp.getCoordinate()));
+			wp.setHamstersSaved(wp.getHamstersSaved() - 1);
+
+			//Some extra time to think about your actions
+			new Thread(() -> {
+				try {Thread.sleep(2000);} catch(Exception e) {}
+				nextTurn();
+			}).start();
+		} 
 	}
 
 	class GameInitThread extends Thread {

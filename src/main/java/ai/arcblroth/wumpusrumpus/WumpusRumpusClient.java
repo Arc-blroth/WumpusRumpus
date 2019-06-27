@@ -204,6 +204,26 @@ public class WumpusRumpusClient extends WebSocketClient {
 								break;
 							}
 
+							// inventory
+							if (args[1].equals(strings_config.getProperty("command.inventory"))) {
+								g.turnOpenInventory(user_id, message_id);
+								break;
+							}
+
+							// yes/no/attack
+							if (args[1].equals(strings_config.getProperty("command.yes"))) {
+								g.turnYes(user_id, message_id);
+								break;
+							}
+							if (args[1].equals(strings_config.getProperty("command.no"))) {
+								g.turnNo(user_id, message_id);
+								break;
+							}
+							if (args[1].equals(strings_config.getProperty("command.attack"))) {
+								g.turnAttack(user_id, message_id);
+								break;
+							}
+
 						} else {
 							continue;
 						}
@@ -238,6 +258,16 @@ public class WumpusRumpusClient extends WebSocketClient {
 				.header("Authorization", "Bot " + bot_config.getProperty("token"))
 				.header("Content-Type", "application/json")
 				.asEmpty().getStatus());
+	}
+	
+	public String getUsername(String user_id) {
+		String get = Unirest.get("https://discordapp.com/api/users/{user_id}")
+							.routeParam("user_id", user_id)
+							.header("Authorization", "Bot " + bot_config.getProperty("token"))
+							.header("Content-Type", "application/json")
+							.asString().getBody();
+
+		return gson.fromJson(get, JsonObject.class).get("username").getAsString();
 	}
 
 	@Override

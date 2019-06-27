@@ -15,10 +15,9 @@ public class EmptyTile extends GameTile {
 	}
 
 	@Override
-	public void onPlayerStep(WumpusRumpusClient wrc, String channel_id, WumpusPlayer wp, Map<Integer, GameTile> map) {
-		wrc.postWrappedMessage(channel_id, 
-				strings_config.getProperty("game.tile.onstep.empty")
-		);
+	public int onPlayerStep(WumpusRumpusClient wrc, String channel_id, WumpusPlayer wp, Map<Integer, GameTile> map) {
+		wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.empty"));
+		return 0;
 	}
 
 	@Override

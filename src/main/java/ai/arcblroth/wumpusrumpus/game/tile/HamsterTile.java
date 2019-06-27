@@ -15,8 +15,10 @@ public class HamsterTile extends GameTile {
 	}
 
 	@Override
-	public void onPlayerStep(WumpusRumpusClient wrc, String channel_id, WumpusPlayer wp, Map<Integer, GameTile> map) {
-
+	public int onPlayerStep(WumpusRumpusClient wrc, String channel_id, WumpusPlayer wp, Map<Integer, GameTile> map) {
+		wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.hamster"));
+		wp.setHamstersSaved(wp.getHamstersSaved() + 1);
+		return 0;
 	}
 
 	@Override
