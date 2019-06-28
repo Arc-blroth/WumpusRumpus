@@ -29,7 +29,7 @@ public class GameInstance {
 	private final ArrayList<String> player_ids = new ArrayList<String>(8);
 	private final ArrayList<WumpusPlayer> players = new ArrayList<WumpusPlayer>(8);
 	private boolean gameStarted = false;
-	private int turns = 0;
+	private int turn = 0;
 	private int currentPlayer = 0;
 	private boolean currentPlayerHasExecutedMoveYet = false;
 	//0=not waiting, 1=rack, 2=router, 3=bug
@@ -161,7 +161,15 @@ public class GameInstance {
 			waitingForPlayerResponse = 0;
 			currentPlayer++;
 			if (currentPlayer >= players.size()) {
+				turn++;
 				currentPlayer = 0;
+				
+				wrc.postMessage(channel_id, CommandWrapper.wrapEmbedMessage(
+							strings_config.getProperty("game.turn.newturn")
+							.replace("{turn}", Integer.toString(turn))
+						, "")
+					);
+				try {Thread.sleep(2000);} catch (InterruptedException e) {}
 			}
 			playTurn();
 		}).start();
@@ -170,6 +178,9 @@ public class GameInstance {
 	public void playTurn() {
 		
 		WumpusPlayer wp = players.get(currentPlayer);
+		
+		//Display map
+		displayMap();
 		
 		//Tell player what they can do.
 		boolean canMoveUp, canMoveDown, canMoveRight, canMoveLeft;
@@ -189,7 +200,6 @@ public class GameInstance {
 						+  (canMoveRight ? (strings_config.getProperty("game.turn.dir.right")) : "")
 					)
 			);
-		displayMap();
 	}
 
 	private boolean checkIfIsPlayersTurn(String player_id, String message_id) {
@@ -410,12 +420,6 @@ public class GameInstance {
 			gm.getMap().remove(tileInt);
 			gm.getMap().put(tileInt, new EmptyTile(wp.getCoordinate()));
 			wp.setHamstersSaved(wp.getHamstersSaved() - 1);
-
-			//Some extra time to think about your actions
-			new Thread(() -> {
-				try {Thread.sleep(2000);} catch(Exception e) {}
-				nextTurn();
-			}).start();
 		} 
 	}
 
@@ -440,6 +444,16 @@ public class GameInstance {
 
 				wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.start.started"));
 
+				turn = 1;
+
+				wrc.postMessage(channel_id, CommandWrapper.wrapEmbedMessage(
+							strings_config.getProperty("game.turn.newturn")
+							.replace("{turn}", Integer.toString(turn))
+						, "")
+					);
+				
+				// try {Thread.sleep(2000);} catch (InterruptedException e) {}
+				
 				playTurn();
 
 			} catch (Exception e) {

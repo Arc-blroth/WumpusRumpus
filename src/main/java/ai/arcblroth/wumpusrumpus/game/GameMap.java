@@ -38,29 +38,29 @@ public class GameMap {
 	private GameTile generateNewGameTile(int x, int y) {
 		
 		/*  Probablilites for GameTiles:
-		 *  40% - Racks
-		 *  30% - Nothing
+		 *  30% - Racks
+		 *  25% - Nothing
+		 *  20% - Loot
 		 *  10% - Bugs
-		 *  10% - Hamsters
+		 *  5% - Hamsters
 		 *  5% - Routers
-		 *  5% - Loot
 		 */
 		
 		Coordinate coord = new Coordinate(x, y);
 		
 		int random = r.nextInt(20);
-		if (random < 8) {
+		if (random < 6) {
 			return new RackTile(coord);
-		} else if (random < 14) {
+		} else if (random < 11) {
 			return new EmptyTile(coord);
-		} else if (random < 16) {
+		} else if (random < 15) {
+			return new LootTile(coord);
+		} else if (random < 17) {
 			return new BugTile(coord);
 		} else if (random < 18) {
 			return new HamsterTile(coord);
-		} else if (random < 19) {
-			return new RouterTile(coord);
 		} else {
-			return new LootTile(coord);
+			return new RouterTile(coord);
 		}
 	}
 

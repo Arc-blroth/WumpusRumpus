@@ -57,6 +57,8 @@ public class WumpusRumpusClient extends WebSocketClient {
 				last_seqnum = theMessage.get("s")
 						.getAsLong();
 				logger.log(Level.INFO, "Gateway session_id: " + session_id);
+				// Send presence
+				send(WumpusRumpusStatusAssembler.assembleStatusString());
 				startHeartbeatThread();
 				break;
 			} else if (t.equals("MESSAGE_CREATE")) {
