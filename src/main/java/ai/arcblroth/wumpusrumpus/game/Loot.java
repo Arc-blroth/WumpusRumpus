@@ -1,12 +1,33 @@
 package ai.arcblroth.wumpusrumpus.game;
 
-public interface Loot {
+public class Loot {
 	
-	public String getName();
-	public String getFlavorText();
+	private final String name, flavor;
 
-	public double getSaveModifer();
+	private final double saveModifer, defeatModifer;
+	
+	public Loot(String name, String flavor, double saveModifer, double defeatModifer) {
+		super();
+		this.name = name;
+		this.flavor = flavor;
+		this.saveModifer = saveModifer;
+		this.defeatModifer = defeatModifer;
+	}
+	
+	public String getName() {
+		return name;
+	}
 
-	public double getDefeatModifer();
+	public String getFlavorText() {
+		return flavor;
+	}
+
+	public double getSaveModifer() {
+		return saveModifer;
+	}
+
+	public double getDefeatModifer() {
+		return defeatModifer;
+	}
 	
 }

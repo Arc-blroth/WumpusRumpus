@@ -467,6 +467,16 @@ public class GameInstance {
 				wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.bug.success"));
 				gm.replaceTileWithEmpty(wp.getCoordinate());
 				wp.setBugsDefeated(wp.getBugsDefeated() + 1);
+				
+				Loot l = LootLoader.getRandomLoot();
+				wp.getPlayerLoot().add(l);
+				wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.loot.bug")
+						.replace("{loot_name}", l.getName())
+						.replace("{loot_flavor}", l.getFlavorText())
+						.replace("{loot_saveModifer}", Double.toString(l.getSaveModifer()))
+						.replace("{loot_defeatModifer}", Double.toString(l.getDefeatModifer()))
+						);
+				
 			} else {
 				// OW OW OWEE
 				wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.bug.fail"));
@@ -475,7 +485,9 @@ public class GameInstance {
 			
 		} else if (player_coords.contains(wp.getCoordinate())) {
 			// The definition of friendly fire.
-			wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.player"));
+			wrc.postWrappedMessage(channel_id, 
+					strings_config.getProperty("command.attack.at.player")
+					.replace("{player1}", wrc.getUsername(wp.getPlayer_id())));
 		} else if (waitingForPlayerResponse == 1) { //The following are fun!
 			// SABATAGE
 			wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.rack"));
