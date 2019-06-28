@@ -201,14 +201,26 @@ public class WumpusRumpusClient extends WebSocketClient {
 								g.turnMove(user_id, message_id, args[2]);
 								break;
 							}
+							if (args.length == 2 && //Just in case you typed in !wr up instead of !wr move up
+									(  args[1].equals(strings_config.getProperty("command.move.up"))
+									|| args[1].equals(strings_config.getProperty("command.move.down"))
+									|| args[1].equals(strings_config.getProperty("command.move.left"))
+									|| args[1].equals(strings_config.getProperty("command.move.right")))) {
+								g.turnMove(user_id, message_id, args[1]);
+								break;
+							}
 							if (args[1].equals(strings_config.getProperty("command.skip"))) {
 								g.turnSkip(user_id, message_id);
 								break;
 							}
 
-							// inventory
+							// inventory & stats
 							if (args[1].equals(strings_config.getProperty("command.inventory"))) {
 								g.turnOpenInventory(user_id, message_id);
+								break;
+							}
+							if (args[1].equals(strings_config.getProperty("command.stats"))) {
+								g.turnStats(user_id, message_id);
 								break;
 							}
 
@@ -223,6 +235,13 @@ public class WumpusRumpusClient extends WebSocketClient {
 							}
 							if (args[1].equals(strings_config.getProperty("command.attack"))) {
 								g.turnAttack(user_id, message_id);
+								break;
+							}
+
+							// bye
+							if (args[1].equals(strings_config.getProperty("command.end_game"))) {
+								if (g.endGame(user_id, message_id))
+									games.remove(g);
 								break;
 							}
 

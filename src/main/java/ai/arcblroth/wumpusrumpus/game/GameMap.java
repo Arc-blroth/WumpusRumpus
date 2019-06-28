@@ -16,8 +16,8 @@ public class GameMap {
 	private Map<Integer, GameTile> map;
 	
 	private static final String ROOM = // This variable isn't used,
-			  "+---+\n" + 			   // just here for example.
-			"| {char} |\n" + 
+			  "+---+\n" + 			   // just here for reference.
+			  "| R |\n" + 
 			  "+---+";
 
 	public GameMap(int w, int h) {
@@ -119,4 +119,9 @@ public class GameMap {
 		return out.toString().trim();
 	}
 	
+	public void replaceTileWithEmpty(Coordinate c) {
+		getMap().remove(c.getMapInt(getWidth()));
+		getMap().put(c.getMapInt(getWidth()), new EmptyTile(c));
+	}
+
 }

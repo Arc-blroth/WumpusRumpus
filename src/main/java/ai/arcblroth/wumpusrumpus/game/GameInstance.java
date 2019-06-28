@@ -3,6 +3,7 @@ package ai.arcblroth.wumpusrumpus.game;
 import static ai.arcblroth.wumpusrumpus.WumpusRumpusBot.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,20 +29,30 @@ public class GameInstance {
 	private final String guild_id, channel_id;
 	private final ArrayList<String> player_ids = new ArrayList<String>(8);
 	private final ArrayList<WumpusPlayer> players = new ArrayList<WumpusPlayer>(8);
+	private GameInitThread gt;
+	private GameMap gm;
 	private boolean gameStarted = false;
+	private final int TURNS_IN_A_GAME;
 	private int turn = 0;
 	private int currentPlayer = 0;
 	private boolean currentPlayerHasExecutedMoveYet = false;
 	//0=not waiting, 1=rack, 2=router, 3=bug
 	private int waitingForPlayerResponse = 0;
-	private GameInitThread gt;
-	private GameMap gm;
+	private boolean isGameOver = false;
 
 	public GameInstance(WumpusRumpusClient wrc, String guild_id, String player) {
 		this.wrc = wrc;
 		this.guild_id = guild_id;
 		this.player_ids.add(player);
 		
+		int tiag;
+		try {
+			tiag = Integer.parseInt(strings_config.getProperty("game.total_turns_per"));
+		} catch (NumberFormatException e) {
+			tiag = 10;
+		}
+		TURNS_IN_A_GAME = tiag;
+
 		logger.log(Level.INFO, 
 				"Creating channel via POST...");
 		
@@ -153,8 +164,7 @@ public class GameInstance {
 			
 			if(gm.getMap().get(tileInt) instanceof HamsterTile) {
 				//remove hamster tile since player did not attack it
-				gm.getMap().remove(tileInt);
-				gm.getMap().put(tileInt, new EmptyTile(players.get(currentPlayer).getCoordinate()));
+				gm.replaceTileWithEmpty(players.get(currentPlayer).getCoordinate());
 			}
 			
 			currentPlayerHasExecutedMoveYet = false;
@@ -164,12 +174,31 @@ public class GameInstance {
 				turn++;
 				currentPlayer = 0;
 				
-				wrc.postMessage(channel_id, CommandWrapper.wrapEmbedMessage(
-							strings_config.getProperty("game.turn.newturn")
+				if (turn < TURNS_IN_A_GAME) {
+					wrc.postMessage(channel_id, CommandWrapper.wrapEmbedMessage(
+								strings_config.getProperty("game.turn.newturn")
+								.replace("{turn}", Integer.toString(turn))
+								.replace("{turns_left}", Integer.toString(TURNS_IN_A_GAME + 1 - turn))
+							, "")
+						);
+					try {Thread.sleep(2000);} catch (InterruptedException e) {}
+				} else if (turn == TURNS_IN_A_GAME) {
+					wrc.postMessage(channel_id, CommandWrapper.wrapEmbedMessage(
+							strings_config.getProperty("game.turn.finalturn")
 							.replace("{turn}", Integer.toString(turn))
+							.replace("{turns_left}", Integer.toString(TURNS_IN_A_GAME + 1 - turn))
 						, "")
 					);
-				try {Thread.sleep(2000);} catch (InterruptedException e) {}
+					try {Thread.sleep(2000);} catch (InterruptedException e) {}
+				} else {
+					wrc.postMessage(channel_id, CommandWrapper.wrapEmbedMessage(
+							strings_config.getProperty("game.turn.gameover")
+						, "")
+					);
+					try {Thread.sleep(2000);} catch (InterruptedException e) {}
+					gameOver();
+					return; // to prevent playTurn();
+				}
 			}
 			playTurn();
 		}).start();
@@ -203,7 +232,13 @@ public class GameInstance {
 	}
 
 	private boolean checkIfIsPlayersTurn(String player_id, String message_id) {
-
+		
+		//If game is not started or has ended, just stop. Get some help.
+		if(!gameStarted || isGameOver) {
+			wrc.deleteMessage(channel_id, message_id);
+			return false;
+		}
+		
 		// Only can be done if its is a persons' turn
 		if (!players.get(currentPlayer).getPlayer_id().equals(player_id)) {
 			wrc.deleteMessage(channel_id, message_id);
@@ -267,7 +302,7 @@ public class GameInstance {
 
 		//what tile are we on?
 		GameTile gt = gm.getMap().get(wp.getCoordinate().getMapInt(gm.getWidth()));
-		int autoAdvance = gt.onPlayerStep(wrc, channel_id, wp, gm.getMap());
+		int autoAdvance = gt.onPlayerStep(wrc, channel_id, wp, gm);
 		
 		//advance turn
 		if(autoAdvance == 0) nextTurn();
@@ -287,7 +322,6 @@ public class GameInstance {
 		if(!checkIfIsPlayersTurn(player_id, message_id)) return;
 		
 		StringBuilder inventoryBuilder = new StringBuilder();
-		inventoryBuilder.append("```");
 		
 		ArrayList<Loot> playerLoot = wp.getPlayerLoot();
 		
@@ -304,7 +338,6 @@ public class GameInstance {
 				);
 			}
 		}
-		inventoryBuilder.append("```");
 		
 		wrc.postMessage(channel_id, 
 				CommandWrapper.wrapEmbedMessage(
@@ -314,6 +347,36 @@ public class GameInstance {
 					)
 			);
 
+	}
+
+
+	public void turnStats(String player_id, String message_id) {
+		WumpusPlayer wp = players.get(currentPlayer);
+
+		if(!checkIfIsPlayersTurn(player_id, message_id)) return;
+		
+		StringBuilder statsBuilder = new StringBuilder();
+		
+		statsBuilder.append(strings_config.getProperty("command.stats.racks_saved")
+				.replace("{num}", Integer.toString(wp.getRackTilesSaved().size())) + "\n");
+		statsBuilder.append(strings_config.getProperty("command.stats.routers_saved")
+				.replace("{num}", Integer.toString(wp.getRouterTilesSaved().size())) + "\n");
+		statsBuilder.append(strings_config.getProperty("command.stats.hamsters_saved")
+				.replace("{num}", Integer.toString(wp.getHamstersSaved())) + "\n");
+		statsBuilder.append(strings_config.getProperty("command.stats.bugs_defeated")
+				.replace("{num}", Integer.toString(wp.getBugsDefeated())) + "\n");
+		statsBuilder.append(strings_config.getProperty("command.stats.loot_found")
+				.replace("{num}", Integer.toString(wp.getPlayerLoot().size())) + "\n");
+		statsBuilder.append(strings_config.getProperty("command.stats.points")
+				.replace("{num}", Integer.toString(wp.getTotalPoints())) + "\n");
+		
+		wrc.postMessage(channel_id, 
+				CommandWrapper.wrapEmbedMessage(
+						strings_config.getProperty("command.stats.title")
+							.replace("{player}", wrc.getUsername(player_id)),
+						statsBuilder.toString()
+					)
+			);
 	}
 
 	public void turnYes(String player_id, String message_id) {
@@ -336,12 +399,12 @@ public class GameInstance {
 				GameTile gt = gm.getMap().get(wp.getCoordinate().getMapInt(gm.getWidth()));
 				if(gt instanceof RackTile) {
 					((RackTile) gt).saved();
+					wp.getRackTilesSaved().add(((RackTile) gt));
 				}
 			} else {
 				// KABOOM
 				wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.rack.fix.fail"));
-				gm.getMap().remove(wp.getCoordinate().getMapInt(gm.getWidth()));
-				gm.getMap().put(wp.getCoordinate().getMapInt(gm.getWidth()), new EmptyTile(wp.getCoordinate()));
+				gm.replaceTileWithEmpty(wp.getCoordinate());
 			}
 			nextTurn();
 		} else if(waitingForPlayerResponse == 2) {
@@ -354,12 +417,12 @@ public class GameInstance {
 				GameTile gt = gm.getMap().get(wp.getCoordinate().getMapInt(gm.getWidth()));
 				if (gt instanceof RouterTile) {
 					((RouterTile) gt).saved();
+					wp.getRouterTilesSaved().add(((RouterTile) gt));
 				}
 			} else {
 				// KABOOM 2
 				wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.router.fix.fail"));
-				gm.getMap().remove(wp.getCoordinate().getMapInt(gm.getWidth()));
-				gm.getMap().put(wp.getCoordinate().getMapInt(gm.getWidth()), new EmptyTile(wp.getCoordinate()));
+				gm.replaceTileWithEmpty(wp.getCoordinate());
 			}
 			nextTurn();
 			
@@ -383,10 +446,16 @@ public class GameInstance {
 
 	public void turnAttack(String player_id, String message_id) {
 
+		if (!checkIfIsPlayersTurn(player_id, message_id))
+			return;
+
 		WumpusPlayer wp = players.get(currentPlayer);
 		int tileInt = wp.getCoordinate().getMapInt(gm.getWidth());
-
-		if(!checkIfIsPlayersTurn(player_id, message_id)) return;
+		ArrayList<Coordinate> player_coords = new ArrayList<Coordinate>();
+		for (WumpusPlayer p : players) {
+			if (p != wp)
+				player_coords.add(p.getCoordinate());
+		}
 		
 		if (waitingForPlayerResponse == 3) {
 
@@ -396,31 +465,105 @@ public class GameInstance {
 			
 			if(isSuccessful) {
 				wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.bug.success"));
-				gm.getMap().remove(tileInt);
-				gm.getMap().put(tileInt, new EmptyTile(wp.getCoordinate()));
+				gm.replaceTileWithEmpty(wp.getCoordinate());
+				wp.setBugsDefeated(wp.getBugsDefeated() + 1);
 			} else {
 				// OW OW OWEE
 				wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.bug.fail"));
 			}
 			nextTurn();
 			
-		} else if (waitingForPlayerResponse == 1) { //The following are special events
+		} else if (player_coords.contains(wp.getCoordinate())) {
+			// The definition of friendly fire.
+			wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.player"));
+		} else if (waitingForPlayerResponse == 1) { //The following are fun!
+			// SABATAGE
 			wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.rack"));
-			gm.getMap().remove(tileInt);
-			gm.getMap().put(tileInt, new EmptyTile(wp.getCoordinate()));
+			gm.replaceTileWithEmpty(wp.getCoordinate());
+			GameTile gt = gm.getMap().get(wp.getCoordinate().getMapInt(gm.getWidth()));
+			if (gt instanceof RackTile) {
+				for (WumpusPlayer wpe : players) {
+					wpe.getRackTilesSaved().remove((RackTile) gt);
+				}
+			}
 			nextTurn();
 		} else if (waitingForPlayerResponse == 2) {
+			// SABATAGE 2
 			wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.router"));
-			gm.getMap().remove(tileInt);
-			gm.getMap().put(tileInt, new EmptyTile(wp.getCoordinate()));
+			gm.replaceTileWithEmpty(wp.getCoordinate());
+			GameTile gt = gm.getMap().get(wp.getCoordinate().getMapInt(gm.getWidth()));
+			if (gt instanceof RouterTile) {
+				for (WumpusPlayer wpe : players) {
+					wpe.getRouterTilesSaved().remove((RouterTile) gt);
+				}
+			}
 			nextTurn();
 		} else if(gm.getMap().get(tileInt) instanceof HamsterTile) {
 			// Monster.
 			wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.attack.at.hamster"));
-			gm.getMap().remove(tileInt);
-			gm.getMap().put(tileInt, new EmptyTile(wp.getCoordinate()));
+			gm.replaceTileWithEmpty(wp.getCoordinate());
 			wp.setHamstersSaved(wp.getHamstersSaved() - 1);
-		} 
+		}
+	}
+
+	private void gameOver() {
+		
+		// Step 1: sort players by points (see WumpusPlayer#compareTo(WumpusPlayer other))
+		Collections.sort(players);
+		
+		String title = strings_config.getProperty("game.over.won")
+				.replace("{player}", wrc.getUsername(players.get(0).getPlayer_id()));
+		
+		StringBuilder leaderboardBuilder = new StringBuilder();
+		
+		for(int count = 0; count < players.size(); count++) {
+			String key = "rest";
+			if(count == 0) key = "first";
+			if(count == 1) key = "second";
+			if(count == 2) key = "third";
+			leaderboardBuilder.append(
+					strings_config.getProperty("game.over." + key)
+					.replace("{player}", "<@" + players.get(0).getPlayer_id() + ">")
+					.replace("{points}", Integer.toString(players.get(0).getTotalPoints()))
+					+ "\n");
+		}
+		leaderboardBuilder.append("\n");
+		leaderboardBuilder.append(strings_config.getProperty("game.over.epilogue"));
+
+		wrc.postMessage(channel_id, CommandWrapper.wrapEmbedMessage(title, leaderboardBuilder.toString()));
+		try {Thread.sleep(500);} catch(Exception e) {}
+		wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.over.candelete"));
+		isGameOver = true;
+	}
+
+	public boolean endGame(String player_id, String message_id) {
+
+		if (!gameStarted)
+			return false;
+
+		/*
+		 * Only a player can end the game with !wr end_game 
+		 * This is to prevent trolls from not letting people
+		 * see the results of the Rumpus.
+		 */
+		if (!player_ids.contains(player_id)) {
+			wrc.deleteMessage(player_id, message_id);
+			return false;
+		}
+		
+		if(!isGameOver) {
+			gameOver();
+			return false;
+		}
+
+		logger.log(Level.INFO, 
+				"Deleting game channel '" + channel_id + "'. Server returned:" +
+				Unirest.delete("https://discordapp.com/api/channels/{channel_id}")
+				.routeParam("channel_id", channel_id)
+				.header("Authorization", "Bot " + bot_config.getProperty("token"))
+				.header("Content-Type", "application/json")
+				.asJson().getStatus());
+		return true;
 	}
 
 	class GameInitThread extends Thread {
@@ -437,10 +580,17 @@ public class GameInstance {
 				}
 
 				// Setup
+				// Map is a 10x8
+				Random r = new Random();
 				for (String p : player_ids) {
-					players.add(new WumpusPlayer(p, new Coordinate(0, 0)));
+					players.add(new WumpusPlayer(p, new Coordinate(r.nextInt(10), r.nextInt(8))));
 				}
 				gm = new GameMap(10, 8);
+
+				for (WumpusPlayer p : players) {
+					// Make sure all players start on an empty tile
+					gm.replaceTileWithEmpty(p.getCoordinate());
+				}
 
 				wrc.postWrappedMessage(channel_id, strings_config.getProperty("command.start.started"));
 
@@ -449,6 +599,7 @@ public class GameInstance {
 				wrc.postMessage(channel_id, CommandWrapper.wrapEmbedMessage(
 							strings_config.getProperty("game.turn.newturn")
 							.replace("{turn}", Integer.toString(turn))
+							.replace("{turns_left}", Integer.toString(TURNS_IN_A_GAME + 1 - turn))
 						, "")
 					);
 				

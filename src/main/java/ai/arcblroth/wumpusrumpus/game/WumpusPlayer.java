@@ -5,16 +5,17 @@ import java.util.*;
 import ai.arcblroth.wumpusrumpus.game.tile.*;
 
 
-public class WumpusPlayer {
+public class WumpusPlayer implements Comparable<WumpusPlayer> {
 
 	private String player_id;
 	private Coordinate c;
 	private static final double server_save_chance = 0.5;
-	private static final double bug_defeat_chance = 0.6;
+	private static final double bug_defeat_chance = 0.4;
 	private ArrayList<RackTile> rackTilesSaved = new ArrayList<RackTile>();
 	private ArrayList<RouterTile> routerTilesSaved = new ArrayList<RouterTile>();
 	private ArrayList<Loot> playerLoot = new ArrayList<Loot>();
 	private int hamstersSaved = 0;
+	private int bugsDefeated = 0;
 
 	public WumpusPlayer(String player_id, Coordinate c) {
 		this.player_id = player_id;
@@ -65,6 +66,34 @@ public class WumpusPlayer {
 
 	public void setHamstersSaved(int hamstersSaved) {
 		this.hamstersSaved = hamstersSaved;
+	}
+
+	public int getBugsDefeated() {
+		return bugsDefeated;
+	}
+
+	public void setBugsDefeated(int bugsDefeated) {
+		this.bugsDefeated = bugsDefeated;
+	}
+
+	public int getTotalPoints() {
+		return  (int)Math.ceil(
+					  rackTilesSaved.size()
+					+ routerTilesSaved.size() * 1.25
+					+ hamstersSaved * 1.75
+					+ bugsDefeated * 2.25
+					+ playerLoot.size() * 0.5
+				);
+	}
+	
+	//This is to compare for points.
+	@Override
+	public int compareTo(WumpusPlayer other) {
+		int ourPoints = getTotalPoints();
+		int theirPoints = other.getTotalPoints();
+		if(ourPoints < theirPoints) return -1;
+		else if(ourPoints > theirPoints) return 1;
+		else return 0;
 	}
 
 }

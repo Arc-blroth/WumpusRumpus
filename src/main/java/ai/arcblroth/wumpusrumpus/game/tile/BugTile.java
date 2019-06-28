@@ -2,10 +2,9 @@ package ai.arcblroth.wumpusrumpus.game.tile;
 
 import static ai.arcblroth.wumpusrumpus.WumpusRumpusBot.*;
 
-import java.util.Map;
-
 import ai.arcblroth.wumpusrumpus.WumpusRumpusClient;
 import ai.arcblroth.wumpusrumpus.game.Coordinate;
+import ai.arcblroth.wumpusrumpus.game.GameMap;
 import ai.arcblroth.wumpusrumpus.game.WumpusPlayer;
 
 public class BugTile extends GameTile {
@@ -15,7 +14,7 @@ public class BugTile extends GameTile {
 	}
 
 	@Override
-	public int onPlayerStep(WumpusRumpusClient wrc, String channel_id, WumpusPlayer wp, Map<Integer, GameTile> map) {
+	public int onPlayerStep(WumpusRumpusClient wrc, String channel_id, WumpusPlayer wp, GameMap map) {
 		wrc.postWrappedMessage(channel_id, strings_config.getProperty("game.tile.onstep.bug"));
 		// TODO: battle!
 		return 3;
