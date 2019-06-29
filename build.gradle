@@ -21,6 +21,8 @@ dependencies {
    implementation 'com.konghq:unirest-java:2.3.08'
 }
 
+mainClassName = "ai.arcblroth.wumpusrumpus.WumpusRumpusBot"
+
 sourceSets {
 	main {
 		java {
@@ -31,4 +33,3 @@ sourceSets {
 		}
 	}
 }
-

@@ -1,0 +1,93 @@
+[
+	{
+		"name": "Party Leftovers",
+		"flavor": "Probably from that party from a few days ago.",
+		"saveModifer": 1.1,
+		"defeatModifer": 1.1
+	},
+	{
+		"name": "Katana",
+		"flavor": "Who even left this in the servers, anyway?",
+		"saveModifer": 0.7,
+		"defeatModifer": 1.5
+	},
+	{
+		"name": "Discord Nitro",
+		"flavor": "It's not an ice cream! It's a year of free games!",
+		"saveModifer": 1.1,
+		"defeatModifer": 1
+	},
+	{
+		"name": "MEE6",
+		"flavor": "That's the wrong bot!",
+		"saveModifer": 1.3,
+		"defeatModifer": 0.95
+	},
+	{
+		"name": "A Chest of Gold Coins",
+		"flavor": "Shiny but not very useful.",
+		"saveModifer": 0.99,
+		"defeatModifer": 1
+	},
+	{
+		"name": "Bug Electrifier",
+		"flavor": "Why does it look like a tennis racket?",
+		"saveModifer": 0.6,
+		"defeatModifer": 1.9
+	},
+	{
+		"name": "The Golden Scar",
+		"flavor": "Has nothing to do with Fortnite. Suggested by @kawaii chan#9793.",
+		"saveModifer": 0.9,
+		"defeatModifer": 1.2
+	},
+	{
+		"name": "A Magical Wump-o-corn",
+		"flavor": "Taste the magic! Suggested by @Ancient#7404",
+		"saveModifer": 1.5,
+		"defeatModifer": 1.2
+	},
+	{
+		"name": "StackOverflow, The Book, 3rd Edition",
+		"flavor": "Every developer's best friend.",
+		"saveModifer": 1.7,
+		"defeatModifer": 1.8,
+		"_comment": "The most op thing you can get in this game."
+	},
+	{
+		"name": "Promotion",
+		"flavor": "You can find me at github.com/Arc-blroth, where I make other cool stuff.",
+		"saveModifer": 1.1,
+		"defeatModifer": 1.1
+	},
+	{
+		"name": "Bass Headphones",
+		"flavor": "Sounds like fun!",
+		"saveModifer": 1.2,
+		"defeatModifer": 0.9
+	},
+	{
+		"name": "null",
+		"flavor": "Error 404 (Not Found)",
+		"saveModifer": 0.7,
+		"defeatModifer": 0.7
+	},
+	{
+		"name": "Technician's Toolbox",
+		"flavor": "Totally Tongue Twisting!",
+		"saveModifer": 1.4,
+		"defeatModifer": 1
+	},
+	{
+		"name": "The IT Team",
+		"flavor": "We're not loot!",
+		"saveModifer": 1.6,
+		"defeatModifer": 0.9
+	},
+	{
+		"name": "Diamond Wrench",
+		"flavor": "Indestructible!",
+		"saveModifer": 1.5,
+		"defeatModifer": 1.2
+	}
+]

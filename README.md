@@ -97,13 +97,15 @@ To join a new game, type !wr join in the game's channel. Once all players have j
 
 `!wr attack` - If the player is currently in a battle with a bug, this will cause the player to try attacking the bug. Players can also attack servers and routers to destroy them, or even other players...
 
-# Credits
+# Credits & Licenses
 
 WumpusRumpus was conjured up and developed by Arc'blroth for the 2019 Discord HackWeek that ran from June 24 to June 28.
 
 Thanks to Discord for making such a great platform to hang out _and_ to develop for.<br/>
 
 **Three Great Pieces of Open-Source Software were used in the making of this bot. Please see OPEN&#8209;SOURCE&#8209;LICENSES.md for each of their licenses.**
+
+**This software is licensed under the GNU GPL. See LICENSE.md for the full license.**
 
 _Disclaimer: Wumpus is the true hero as well as the mascot of Discord Inc. Discord and all other registered trademarks are (c) Discord Inc._
 

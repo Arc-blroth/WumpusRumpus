@@ -1,0 +1,13 @@
+{
+	"op": 2,
+	"d": {
+	  "token": "{token}",
+	  "properties": {
+		"$os": "windows",
+		"$browser": "wumpusrumpus-bot",
+		"$device": "wumpusrumpus-bot"
+	  },
+	  "compress": false,
+	  "large_threshold": 50
+	}
+}
