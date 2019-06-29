@@ -97,7 +97,13 @@ public class GameInstance {
 			return false;
 		}
 
-		if (player_ids.size() < 8 /* && !player_ids.contains(player_id) */) {
+		// One shall not join their own game.
+		if (player_ids.contains(player_id)) {
+			wrc.deleteMessage(channel_id, joinMessageId);
+			return false;
+		}
+
+		if (player_ids.size() < 8) {
 			player_ids.add(player_id);
 
 			// delete the !wr join message since its annoying :)
@@ -522,6 +528,7 @@ public class GameInstance {
 		
 		// Step 1: sort players by points (see WumpusPlayer#compareTo(WumpusPlayer other))
 		Collections.sort(players);
+		Collections.reverse(players);
 		
 		String title = strings_config.getProperty("game.over.won")
 				.replace("{player}", wrc.getUsername(players.get(0).getPlayer_id()));
@@ -535,8 +542,8 @@ public class GameInstance {
 			if(count == 2) key = "third";
 			leaderboardBuilder.append(
 					strings_config.getProperty("game.over." + key)
-					.replace("{player}", "<@" + players.get(0).getPlayer_id() + ">")
-					.replace("{points}", Integer.toString(players.get(0).getTotalPoints()))
+					.replace("{player}", "<@" + players.get(count).getPlayer_id() + ">")
+							.replace("{points}", Integer.toString(players.get(count).getTotalPoints()))
 					+ "\n");
 		}
 		leaderboardBuilder.append("\n");

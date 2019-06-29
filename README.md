@@ -93,7 +93,7 @@ To join a new game, type !wr join in the game's channel. Once all players have j
 
 `!wr skip` - Skips the current player's turn.
 
-`!wr yes`/`wr no` - Confirms attempting to save a server or router.
+`!wr yes`/`!wr no` - Confirms attempting to save a server or router.
 
 `!wr attack` - If the player is currently in a battle with a bug, this will cause the player to try attacking the bug. Players can also attack servers and routers to destroy them, or even other players...
 
